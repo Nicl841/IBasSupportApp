@@ -1,0 +1,107 @@
+@page "/create-support"
+@using IbasSupportApp.Models
+@using IbasSupportApp.Services
+@inject CosmosDbService CosmosDbService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Opret Henvendelse</PageTitle>
+
+<h3>Opret Henvendelse</h3>
+
+<div class="row">
+    <div class="col-md-8">
+        <EditForm Model="@supportMessage" OnValidSubmit="HandleValidSubmit" FormName="supportForm">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <div class="mb-3">
+                <label for="navn" class="form-label">Navn:</label>
+                <InputText id="navn" class="form-control" @bind-Value="supportMessage.name" />
+                <ValidationMessage For="@(() => supportMessage.name)" />
+            </div>
+
+            <div class="mb-3">
+                <label for="email" class="form-label">Email:</label>
+                <InputText id="email" class="form-control" @bind-Value="supportMessage.email" type="email" />
+                <ValidationMessage For="@(() => supportMessage.email)" />
+            </div>
+
+            <div class="mb-3">
+                <label for="telefon" class="form-label">Telefon:</label>
+                <InputText id="telefon" class="form-control" @bind-Value="supportMessage.phone" type="tel" />
+                <ValidationMessage For="@(() => supportMessage.phone)" />
+            </div>
+
+            <div class="mb-3">
+                <label for="kategori" class="form-label">Kategori:</label>
+                <InputSelect id="kategori" class="form-control" @bind-Value="supportMessage.category">
+                    <option value="">-- Vælg kategori --</option>
+                    <option value="Teknisk spørgsmål vedr. køb af en ny cykel">Teknisk spørgsmål vedr. køb af en ny cykel</option>
+                    <option value="Gør-det-selv'er - reservedele">Gør-det-selv'er - reservedele</option>
+                    <option value="Forslag til ændringer/nye features">Forslag til ændringer/nye features</option>
+                    <option value="Hvor ligger nærmeste forhandler">Hvor ligger nærmeste forhandler</option>
+                    <option value="Send mig det nyeste katalog">Send mig det nyeste katalog</option>
+                    <option value="Andet">Andet</option>
+                </InputSelect>
+                <ValidationMessage For="@(() => supportMessage.category)" />
+            </div>
+
+            <div class="mb-3">
+                <label for="beskrivelse" class="form-label">Beskrivelse:</label>
+                <InputTextArea id="beskrivelse" class="form-control" @bind-Value="supportMessage.description" rows="5" />
+                <ValidationMessage For="@(() => supportMessage.description)" />
+            </div>
+
+            <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                @if (isSubmitting)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    <span>Sender...</span>
+                }
+                else
+                {
+                    <span>Opret henvendelse</span>
+                }
+            </button>
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success mt-3" role="alert">
+                    @successMessage
+                </div>
+            }
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private SupportMessage supportMessage { get; set; } = new();
+    
+    private bool isSubmitting = false;
+    private string successMessage = string.Empty;
+
+    private async Task HandleValidSubmit()
+    {
+        isSubmitting = true;
+        successMessage = string.Empty;
+
+        try
+        {
+            await CosmosDbService.AddSupportMessageAsync(supportMessage);
+            successMessage = "Din henvendelse er sendt!";
+            
+            // Reset form
+            supportMessage = new SupportMessage();
+        }
+        catch (Exception ex)
+        {
+            successMessage = $"Fejl: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}
